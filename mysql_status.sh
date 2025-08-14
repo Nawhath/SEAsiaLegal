@@ -24,6 +24,7 @@ if ! service $SERVICE status | grep -q "running"; then
     if service $SERVICE restart; then
         echo "MySQL service restarted successfully."
         send_telegram_message "✅ MySQL service on $(hostname) has been successfully restarted."
+        service mysql restart
     else
         echo "Failed to restart MySQL service."
         send_telegram_message "❌ Failed to restart MySQL service on $(hostname). Please check manually!"
