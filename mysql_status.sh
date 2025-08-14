@@ -5,7 +5,7 @@ TELEGRAM_BOT_TOKEN="7512739719:AAFWb5x73F8VJVh1oaD7sVZ7r_vaf8PhtkY"
 TELEGRAM_CHAT_ID="-4963020838"
 
 # Website URL to check
-WEBSITE_URL="https://seasialegal.com/"  # แก้ไขเป็น URL ของเว็บไซต์คุณ
+WEBSITE_URL="https://seasialegal.com/"
 
 # Telegram
 send_telegram_message() {
@@ -59,7 +59,7 @@ check_website() {
 
 # Check MySQL service
 SERVICE="mysql"
-if ! service $SERVICE status | grep -q "running"; then
+if ! service $SERVICE status | grep -q "start/running"; then
     echo "MySQL service is not running. Attempting to restart..."
     send_telegram_message "🚨 MySQL service on $(hostname) is DOWN! Attempting to restart..."
 
