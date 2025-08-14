@@ -4,7 +4,10 @@
 TELEGRAM_BOT_TOKEN="7512739719:AAFWb5x73F8VJVh1oaD7sVZ7r_vaf8PhtkY"
 TELEGRAM_CHAT_ID="-4963020838"
 
-#Telegram
+# Website URL to check
+WEBSITE_URL="https://seasialegal.com/"  # แก้ไขเป็น URL ของเว็บไซต์คุณ
+
+# Telegram
 send_telegram_message() {
     local message=$1
     curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
@@ -12,24 +15,64 @@ send_telegram_message() {
         -d text="$message"
 }
 
-# CHECK MySQL service
+# Check Website for database connection error
+check_website() {
+    if curl -s "$WEBSITE_URL" | grep -q "Error establishing a database connection"; then
+        echo "Website shows database connection error. Attempting to restart MySQL and Apache2..."
+        send_telegram_message "🚨 Website $(hostname) shows 'Error establishing a database connection'. Attempting to restart MySQL and Apache2..."
+
+        # Restart MySQL
+        if service mysql restart; then
+            echo "MySQL service restarted successfully."
+            send_telegram_message "✅ MySQL service on $(hostname) has been successfully restarted."
+        else
+            echo "Failed to restart MySQL service."
+            send_telegram_message "❌ Failed to restart MySQL service on $(hostname)."
+            return 1
+        fi
+
+        # Restart Apache2
+        if service apache2 restart; then
+            echo "Apache2 service restarted successfully."
+            send_telegram_message "✅ Apache2 service on $(hostname) has been successfully restarted."
+        else
+            echo "Failed to restart Apache2 service."
+            send_telegram_message "❌ Failed to restart Apache2 service on $(hostname)."
+            return 1
+        fi
+
+        # Verify website after restart
+        sleep 5  # Wait for services to stabilize
+        if curl -s "$WEBSITE_URL" | grep -q "Error establishing a database connection"; then
+            send_telegram_message "❌ Website $(hostname) still shows database connection error after restart. Please check manually!"
+            return 1
+        else
+            send_telegram_message "✅ Website $(hostname) is back online after service restart."
+            return 0
+        fi
+    else
+        echo "Website is accessible with no database connection error."
+        # send_telegram_message "🟢 Website $(hostname) is running normally."
+        return 0
+    fi
+}
+
+# Check MySQL service
 SERVICE="mysql"
 if ! service $SERVICE status | grep -q "running"; then
     echo "MySQL service is not running. Attempting to restart..."
-    
-    # ALERT 
     send_telegram_message "🚨 MySQL service on $(hostname) is DOWN! Attempting to restart..."
 
-    # RETRY restart service
+    # Retry restart service
     if service $SERVICE restart; then
         echo "MySQL service restarted successfully."
         send_telegram_message "✅ MySQL service on $(hostname) has been successfully restarted."
-        service mysql restart
     else
         echo "Failed to restart MySQL service."
         send_telegram_message "❌ Failed to restart MySQL service on $(hostname). Please check manually!"
     fi
 else
     echo "MySQL service is running."
-    # send_telegram_message "🟢 MySQL service on $(hostname) is running normally."
+    # Check website only if MySQL is running
+    check_website
 fi
